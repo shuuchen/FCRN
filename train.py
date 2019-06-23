@@ -9,6 +9,8 @@ from weights import load_weights
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plot
+import pandas as pd
+
 
 dtype = torch.cuda.FloatTensor
 weights_file = "NYU_ResNet-UpProj.npy"
@@ -67,9 +69,9 @@ def main():
     # 2.Load model
     print("Loading model......")
     model = FCRN(batch_size)
-    #resnet = torchvision.models.resnet50(pretrained=True)
-    resnet = torchvision.models.resnet50()
-    resnet.load_state_dict(torch.load('/home/pengfei/data/nets/ResNet/resnet50-19c8e357.pth'))
+    resnet = torchvision.models.resnet50(pretrained=True)
+    #resnet = torchvision.models.resnet50()
+    #resnet.load_state_dict(torch.load('/home/pengfei/data/nets/ResNet/resnet50-19c8e357.pth'))
     #resnet.load_state_dict(torch.load('/home/xpfly/nets/ResNet/resnet50-19c8e357.pth'))
     print("resnet50 loaded.")
     resnet50_pretrained_dict = resnet.state_dict()
@@ -160,6 +162,7 @@ def main():
         else:
             print("=> no checkpoint found at '{}'".format(resume_file))
 
+    df_loss = pd.DataFrame(columns=['train_loss', 'val_loss'])
     for epoch in range(num_epochs):
 
         # 4.Optim
@@ -173,6 +176,7 @@ def main():
         running_loss = 0
         count = 0
         epoch_loss = 0
+        epoch_df_loss = []
 
         #for i, (input, depth) in enumerate(train_loader):
         for input, depth in train_loader:
@@ -184,7 +188,7 @@ def main():
 
             output = model(input_var)
             loss = loss_fn(output, depth_var)
-            print('loss:', loss.data.cpu()[0])
+            print('loss:', loss.data.cpu().item())
             count += 1
             running_loss += loss.data.cpu().numpy()
 
@@ -193,6 +197,7 @@ def main():
             optimizer.step()
 
         epoch_loss = running_loss / count
+        epoch_df_loss += [epoch_loss]
         print('epoch loss:', epoch_loss)
 
         # validate
@@ -225,7 +230,10 @@ def main():
                 num_samples += 1
 
         err = float(loss_local) / num_samples
+        epoch_df_loss += [err]
         print('val_error:', err)
+
+        df_loss.loc[epoch] = epoch_df_loss
 
         if err < best_val_err:
             best_val_err = err
@@ -237,7 +245,7 @@ def main():
 
         if epoch % 10 == 0:
             learning_rate = learning_rate * 0.6
-
+    df_loss.to_csv('./loss.csv')
 
 if __name__ == '__main__':
     main()

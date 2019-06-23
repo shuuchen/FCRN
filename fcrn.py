@@ -148,7 +148,7 @@ class FCRN(nn.Module):
 
         self.conv3 = nn.Conv2d(64, 1, 3, padding=1)
 
-        self.upsample = nn.Upsample((228, 304), mode='bilinear')
+        self.upsample = nn.Upsample((228, 304), mode='bilinear', align_corners=True)
 
         # initialize
         if True:
